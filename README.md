@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Premiere Square — Mona 70MM & Elphinstone, Patna
+
+A multi-page, dynamic, interactive Next.js website for **The Premiere Square** (Mona 70MM & Elphinstone), Patna's iconic heritage cinema destination.
+
+## Features
+
+- **Live Showtimes** — Scrapes real-time movie data from BookMyShow via Playwright
+- **Date Picker** — Browse movies for today or upcoming days (4-day range from BMS)
+- **Theatre Selection Dialog** — Click any movie card to see showtimes separated by venue (Mona 70MM vs Elphinstone)
+- **Direct Booking** — Each showtime links directly to that theatre's BMS booking page
+- **Heritage Story** — Dedicated page tracing the Kataruka family's cinema legacy from 1930 to present
+- **Facilities** — Detailed view of both venues: screens, sound systems, seating, concessions
+- **Location & Contact** — Map, directions, parking info, phone numbers
+- **Responsive Design** — Works across mobile, tablet, and desktop
+- **Dark Theme with Gold Accents** — Inspired by [district.in](https://district.in)'s cinematic aesthetic
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Styling:** Tailwind CSS v4
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **Scraping:** Playwright (headless Chromium)
+- **Language:** TypeScript
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Install Playwright browsers
+npx playwright install chromium
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The site runs at [http://localhost:3001](http://localhost:3001).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── api/movies/route.ts    # BookMyShow scraper + cache
+│   ├── page.tsx               # Home page
+│   ├── heritage/page.tsx      # Cinema heritage story
+│   ├── now-showing/page.tsx   # Live movies + date picker
+│   ├── facilities/page.tsx    # Venue facilities
+│   └── location/page.tsx      # Map, contact, directions
+├── components/
+│   ├── Navbar.tsx
+│   ├── Footer.tsx
+│   ├── ScrollReveal.tsx       # Intersection observer animation
+│   ├── DateSelector.tsx       # Date pill picker
+│   └── TheatreSelectionDialog.tsx
+└── globals.css                # Design system, animations, utilities
+```
 
-## Learn More
+## How the Scraper Works
 
-To learn more about Next.js, take a look at the following resources:
+1. Playwright launches headless Chromium on API request
+2. Opens both Mona and Elphinstone BMS cinema pages in parallel
+3. Extracts movie data from `window.__INITIAL_STATE__`
+4. Merges showtimes by movie title, grouped per theatre
+5. Results are cached for 7 minutes with stale-while-revalidate
+6. Cache is pre-warmed on server start for instant first load
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 18+
+- Playwright with Chromium
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private — The Premiere Square, Patna
