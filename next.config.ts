@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["got-scraping"],
+  serverExternalPackages: ["got", "http2-wrapper"],
   images: {
     remotePatterns: [
       {
