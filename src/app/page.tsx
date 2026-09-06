@@ -89,7 +89,7 @@ export default function HomePage() {
           >
             <div className="relative w-32 h-32 md:w-40 md:h-40 mx-auto overflow-hidden rounded-full border-2 border-gold/30 glow-gold">
               <Image
-                src="/mona-70mm-patna-logo.jpg"
+                src="/premiere-square-logo.jpeg"
                 alt="The Premiere Square Logo"
                 fill
                 className="object-cover"
@@ -210,7 +210,7 @@ export default function HomePage() {
                 <div className="bg-gradient-card rounded-2xl overflow-hidden card-hover">
                   <div className="relative h-64 md:h-80 overflow-hidden">
                     <Image
-                      src="/images.png"
+                      src="/mona-logo.jpg"
                       alt="Mona 70MM"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -258,7 +258,7 @@ export default function HomePage() {
                 <div className="bg-gradient-card rounded-2xl overflow-hidden card-hover">
                   <div className="relative h-64 md:h-80 overflow-hidden">
                     <Image
-                      src="/avplsx7jf.webp"
+                      src="/elphinstone-logo.png"
                       alt="Elphinstone"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-700"

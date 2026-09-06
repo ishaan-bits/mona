@@ -170,8 +170,14 @@ export default function FacilitiesPage() {
                   <div className="absolute inset-4 rounded-full border border-gold/15" />
                   <div className="absolute inset-8 rounded-full border border-gold/20" />
                   <div className="absolute inset-12 rounded-full border border-gold/25" />
-                  <div className="absolute inset-16 rounded-full bg-gold/10 flex items-center justify-center">
-                    <Volume2 size={40} className="text-gold" />
+                  <div className="absolute inset-16 rounded-full bg-gold/10 flex items-center justify-center overflow-hidden">
+                    <Image
+                      src="/dolby-atmos-logo.webp"
+                      alt="Dolby Atmos"
+                      width={120}
+                      height={120}
+                      className="object-contain"
+                    />
                   </div>
                 </div>
               </div>

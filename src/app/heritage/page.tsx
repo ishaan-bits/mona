@@ -57,7 +57,7 @@ export default function HeritagePage() {
               <div className="relative">
                 <div className="relative rounded-2xl overflow-hidden aspect-[4/5]">
                   <Image
-                    src="/avplsx7jf.webp"
+                    src="/elphinstone-logo.png"
                     alt="Elphinstone"
                     fill
                     className="object-cover"
@@ -183,7 +183,7 @@ export default function HeritagePage() {
               <div className="relative">
                 <div className="relative rounded-2xl overflow-hidden aspect-[4/5]">
                   <Image
-                    src="/images.png"
+                    src="/mona-logo.jpg"
                     alt="Mona 70MM"
                     fill
                     className="object-cover"

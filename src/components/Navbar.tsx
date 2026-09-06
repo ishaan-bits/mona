@@ -41,7 +41,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 md:w-12 md:h-12 overflow-hidden rounded-full border border-gold/30 group-hover:border-gold transition-colors">
               <Image
-                src="/mona-70mm-patna-logo.jpg"
+                src="/premiere-square-logo.jpeg"
                 alt="The Premiere Square"
                 fill
                 className="object-cover"

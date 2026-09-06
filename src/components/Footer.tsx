@@ -14,7 +14,7 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-6">
               <div className="relative w-12 h-12 overflow-hidden rounded-full border border-gold/30">
                 <Image
-                  src="/mona-70mm-patna-logo.jpg"
+                  src="/premiere-square-logo.jpeg"
                   alt="The Premiere Square"
                   fill
                   className="object-cover"
