@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -64,35 +64,46 @@ export default function NowShowingPage() {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [dates, setDates] = useState<ShowDate[]>([]);
+  // Refs so background polls always use the latest selection (the interval
+  // closure would otherwise keep the empty selection from the first render).
+  const selectedDateRef = useRef("");
 
-  const fetchMovies = async (dateCode?: string, showLoading = false) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    const dateParam = dateCode || selectedDate || "";
+  // No state updates happen before the first await, so this is safe to call
+  // synchronously from an effect.
+  const fetchMovies = async (
+    dateCode?: string,
+    opts: { showError?: boolean } = {}
+  ) => {
+    const dateParam = dateCode || selectedDateRef.current || "";
     const url = dateParam ? `/api/movies?date=${dateParam}` : "/api/movies";
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: "no-store" });
       const data: ApiResponse = await res.json();
 
       if (data.success && data.movies.length > 0) {
         setMovies(data.movies);
+        setError(null);
         setLastUpdated(data.lastUpdated || null);
-      } else if (!movies.length) {
+      } else if (opts.showError) {
+        // Only surface empty state for actions the user can see/react to;
+        // a transient failure during a background poll keeps current data.
+        setMovies([]);
         setError(
           data.message ||
             "No shows available at the moment. Please check BookMyShow for the latest schedule."
         );
       }
-      // Always update dates if returned
+
       if (data.dates && data.dates.length > 0) {
         setDates(data.dates);
-        // Set initial selected date from API
-        if (!selectedDate && data.dates.length > 0) {
+        if (!selectedDateRef.current) {
+          selectedDateRef.current = data.dates[0].dateCode;
           setSelectedDate(data.dates[0].dateCode);
         }
       }
     } catch {
-      if (!movies.length) {
+      if (opts.showError) {
+        setMovies([]);
         setError(
           "Unable to load showtimes. Please check BookMyShow directly for the latest schedule."
         );
@@ -102,16 +113,22 @@ export default function NowShowingPage() {
     }
   };
 
+  const beginFetch = (dateCode?: string) => {
+    setLoading(true);
+    setError(null);
+    fetchMovies(dateCode, { showError: true });
+  };
+
   useEffect(() => {
-    fetchMovies(undefined, true);
+    fetchMovies(undefined, { showError: true });
     const interval = setInterval(() => fetchMovies(), 5 * 60 * 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDateChange = (dateCode: string) => {
+    selectedDateRef.current = dateCode;
     setSelectedDate(dateCode);
-    fetchMovies(dateCode, true);
+    beginFetch(dateCode);
   };
 
   return (
@@ -145,7 +162,7 @@ export default function NowShowingPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => fetchMovies(selectedDate, true)}
+              onClick={() => beginFetch(selectedDateRef.current)}
               disabled={loading}
               className="flex items-center gap-2 text-cream/40 hover:text-gold text-xs transition-colors"
             >

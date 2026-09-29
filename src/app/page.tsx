@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { Ticket, ChevronRight, Film, Star, Volume2, Award, Clock, MapPin } from "lucide-react";
+import { Ticket, ChevronRight, Film, Volume2, Award, Clock, MapPin } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
 
 const timelineEvents = [
@@ -23,22 +22,17 @@ const stats = [
   { icon: Award, value: "#1", label: "In Bihar" },
 ];
 
+type Particle = { x: number; y: number; duration: number; delay: number };
+
+// Deterministic so server and client render identical values (no hydration mismatch).
+const particles: Particle[] = Array.from({ length: 20 }, (_, i) => ({
+  x: (i * 173) % 1200,
+  y: (i * 89) % 800,
+  duration: 4 + ((i * 7) % 40) / 10,
+  delay: ((i * 13) % 50) / 10,
+}));
+
 const FloatingParticles = () => {
-  const [particles, setParticles] = useState<
-    { x: number; y: number; duration: number; delay: number }[]
-  >([]);
-
-  useEffect(() => {
-    setParticles(
-      Array.from({ length: 20 }, () => ({
-        x: Math.random() * 1200,
-        y: Math.random() * 800,
-        duration: 4 + Math.random() * 4,
-        delay: Math.random() * 5,
-      }))
-    );
-  }, []);
-
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {particles.map((p, i) => (

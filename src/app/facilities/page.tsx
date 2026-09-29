@@ -9,7 +9,6 @@ import {
   Monitor,
   Ticket,
   Coffee,
-  Car,
   Wifi,
   Accessibility,
   Sparkles,

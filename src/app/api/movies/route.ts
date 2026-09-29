@@ -31,6 +31,7 @@ interface Movie {
 }
 
 const cache = new Map<string, { data: { movies: Movie[]; dates: ShowDate[] }; timestamp: number }>();
+const inflight = new Map<string, Promise<{ movies: Movie[]; dates: ShowDate[] }>>();
 let refreshPromise: { dateCode: string; promise: Promise<void> } | null = null;
 const CACHE_TTL = 7 * 60 * 1000;
 
@@ -39,9 +40,38 @@ const CINEMAS = [
   { name: "Elphinstone", venueCode: "ESCP", slug: "Elphinstone-Cinema-Patna-patna" },
 ];
 
+const IST = "Asia/Kolkata";
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// BookMyShow shows run on IST, so "today" must be computed in Asia/Kolkata
+// (Vercel runs in UTC, which is often a different calendar day than Patna).
 function todayCode(): string {
-  const now = new Date();
-  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: IST }).format(new Date());
+  return parts.replace(/-/g, "");
+}
+
+// Local fallback date strip so the UI still lets users pick a date when
+// BookMyShow is unreachable (403 / challenge page).
+function fallbackDates(fromCode: string, count = 7): ShowDate[] {
+  const year = Number(fromCode.slice(0, 4));
+  const month = Number(fromCode.slice(4, 6)) - 1;
+  const day = Number(fromCode.slice(6, 8));
+  const start = Date.UTC(year, month, day);
+  const dates: ShowDate[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(start + i * 24 * 60 * 60 * 1000);
+    const dateCode = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+    dates.push({
+      label: i === 0 ? `Today, ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()].slice(0, 3)}` : `${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()].slice(0, 3)}`,
+      dateCode,
+      day: DAY_NAMES[d.getUTCDay()],
+      date: String(d.getUTCDate()),
+      month: MONTH_NAMES[d.getUTCMonth()],
+      year: String(d.getUTCFullYear()),
+    });
+  }
+  return dates;
 }
 
 function extractInitialState(html: string): Record<string, unknown> | null {
@@ -82,7 +112,6 @@ function parseState(state: any, cinema: (typeof CINEMAS)[0], dateCode: string): 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const movies = showData.Event.map((event: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const child = event.ChildEvents?.[0];
     if (!child) return null;
     const showtimes = (child.ShowTimes || [])
@@ -154,44 +183,83 @@ async function scrapeAll(dateCode: string): Promise<{ movies: Movie[]; dates: Sh
   return { movies: Array.from(seen.values()), dates: allDates };
 }
 
+// Shares a single scrape per date across concurrent requests so we don't
+// hammer BookMyShow (repeated hits trigger Cloudflare 403 challenges).
+function scrapeShared(dateCode: string): Promise<{ movies: Movie[]; dates: ShowDate[] }> {
+  const existing = inflight.get(dateCode);
+  if (existing) return existing;
+
+  const promise = scrapeAll(dateCode)
+    .then((result) => {
+      // Only ever cache non-empty results; empty ones must be retried.
+      if (result.movies.length > 0) {
+        cache.set(dateCode, { data: result, timestamp: Date.now() });
+      }
+      return result;
+    })
+    .finally(() => {
+      inflight.delete(dateCode);
+    });
+
+  inflight.set(dateCode, promise);
+  return promise;
+}
+
 function refreshCache(dateCode: string): void {
   if (refreshPromise?.dateCode === dateCode) return;
   refreshPromise = {
     dateCode,
-    promise: scrapeAll(dateCode).then(({ movies, dates }) => {
-      if (movies.length > 0) cache.set(dateCode, { data: { movies, dates }, timestamp: Date.now() });
-    }).catch((err) => console.error("Background refresh failed:", err))
+    promise: scrapeShared(dateCode)
+      .catch((err) => console.error("Background refresh failed:", err))
       .then(() => { refreshPromise = null; }),
   };
 }
 
-refreshCache(todayCode());
+export const dynamic = "force-dynamic";
 
-export const revalidate = 300;
+const NO_STORE = { "cache-control": "no-store" };
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const dateCode = searchParams.get("date") || todayCode();
+  const requested = searchParams.get("date");
+  const dateCode = requested && /^\d{8}$/.test(requested) ? requested : todayCode();
 
   const cached = cache.get(dateCode);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return NextResponse.json({ success: true, ...cached.data, lastUpdated: new Date(cached.timestamp).toISOString(), cached: true });
+    return NextResponse.json({ success: true, ...cached.data, lastUpdated: new Date(cached.timestamp).toISOString(), cached: true }, { headers: NO_STORE });
   }
   if (cached) {
     refreshCache(dateCode);
-    return NextResponse.json({ success: true, ...cached.data, lastUpdated: new Date(cached.timestamp).toISOString(), cached: true, stale: true });
+    return NextResponse.json({ success: true, ...cached.data, lastUpdated: new Date(cached.timestamp).toISOString(), cached: true, stale: true }, { headers: NO_STORE });
   }
 
   try {
-    const { movies, dates } = await scrapeAll(dateCode);
-    cache.set(dateCode, { data: { movies, dates }, timestamp: Date.now() });
+    const { movies, dates } = await scrapeShared(dateCode);
 
     if (movies.length === 0) {
-      return NextResponse.json({ success: false, movies: [], dates, message: "No shows available at the moment. Please check BookMyShow for the latest schedule.", lastUpdated: new Date().toISOString() });
+      const fallback = dates.length > 0 ? dates : fallbackDates(dateCode);
+      return NextResponse.json(
+        {
+          success: false,
+          movies: [],
+          dates: fallback,
+          message: "No shows found for this date right now. Pick another date or check BookMyShow for the latest schedule.",
+          lastUpdated: new Date().toISOString(),
+        },
+        { headers: NO_STORE }
+      );
     }
-    return NextResponse.json({ success: true, movies, dates, lastUpdated: new Date().toISOString(), cached: false });
+    return NextResponse.json({ success: true, movies, dates, lastUpdated: new Date().toISOString(), cached: false }, { headers: NO_STORE });
   } catch (error) {
     console.error("Scraping failed:", error);
-    return NextResponse.json({ success: false, movies: [], dates: [], message: "Unable to fetch showtimes. Please check BookMyShow for the latest schedule." }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        movies: [],
+        dates: fallbackDates(dateCode),
+        message: "Unable to fetch showtimes right now. Please try again, or check BookMyShow for the latest schedule.",
+      },
+      { status: 503, headers: NO_STORE }
+    );
   }
 }

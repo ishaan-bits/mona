@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Clock, Film, Ticket, MapPin } from "lucide-react";
+import { X, Clock, Ticket, MapPin } from "lucide-react";
 
 interface TheatreShowtime {
   name: string;
